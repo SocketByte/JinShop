@@ -27,7 +27,7 @@ venv
 build
 
 # Idea
-idea/
+.idea/
 *.iml
 *.iws
 *.tmp
