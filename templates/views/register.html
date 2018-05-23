@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <h1 class="display-4">Register</h1>
+    <p class="lead">Register a new account</p>
+    <hr class="my-4">
+    {% from 'includes/_formhelpers.html' import render_field %}
+    <form method="post" action="">
+        <div class="form-group">
+            {{ render_field(form.username, class_="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ render_field(form.email, class_="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ render_field(form.password, class_="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ render_field(form.confirm_password, class_="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ render_field(form.captcha, class_="form-control") }}
+        </div>
+        <p>
+            <input type="submit" class="btn btn-primary" value="Register">
+        </p>
+    </form>
+{% endblock %}

@@ -1,0 +1,36 @@
+*.py[co]
+*.DS_*
+# Packages
+*.egg
+*.egg-info
+dist
+build
+parts
+bin
+var
+sdist
+.installed.cfg
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+
+#Translations
+*.mo
+
+#Mr Developer
+venv
+*.pyc
+build
+
+# Idea
+idea/
+*.iml
+*.iws
+*.tmp
+
+# Secret
+secret_conf.ini

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JinShop</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body>
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
+
+    <div class="container mt-4">
+        {% include 'includes/_navbar.html' %}
+        {% block body_down %} {% endblock %}
+        {% if request.path != "/" %}
+            <div class="container" style="background-color: whitesmoke">
+                <br>
+                {% include 'includes/_messages.html' %}
+                <br>
+                <div class="ml-3">
+                    {% block body %} {% endblock %}
+                </div>
+                <br>
+            </div>
+        {% else %}
+            {% include 'includes/_messages.html' %}
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <h1 class="display-4">Password recovery</h1>
+    <p class="lead">Change your password in case of forgetting it</p>
+    <hr class="my-4">
+    {% from 'includes/_formhelpers.html' import render_field %}
+    <form method="post" action="">
+        <div class="form-group">
+            {{ render_field(form.username, class_="form-control") }}
+        </div>
+        <p>
+            <input type="submit" class="btn btn-primary" value="Recover password">
+        </p>
+    </form>
+{% endblock %}
