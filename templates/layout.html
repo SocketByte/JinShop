@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/logo.png') }}">
 </head>
-<body>
+<body background="/static/images/background.jpg">
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
 
@@ -14,7 +14,7 @@
         {% include 'includes/_navbar.html' %}
         {% block body_down %} {% endblock %}
         {% if request.path != "/" %}
-            <div class="container" style="background-color: whitesmoke">
+            <div class="container" style="background-color: whitesmoke;">
                 <br>
                 {% include 'includes/_messages.html' %}
                 <br>

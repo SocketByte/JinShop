@@ -3,6 +3,7 @@ from microsms.microsms_conf import configuration
 
 
 def check_code(number, code):
+    # You can easily change the parsing alghoritm for different SMS service providers
     response = url_response("https://microsms.pl/api/check.php?userid={}&number={}&code={}&serviceid={}"
                             .format(configuration['USER_ID'], number, code, configuration['SERVICE_ID']))
 

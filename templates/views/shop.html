@@ -3,7 +3,7 @@
 {% block body %}
     <div class="row ml-2">
         {% for offer in shop_offers %}
-            <div class="col-sm-4 mt-5">
+            <div class="col-sm-4 {% if loop.index > 3 %} mt-5 {% endif %}">
                 <div class="card" style="width: 18rem;">
                   <img class="card-img-top" src="/static/images/logo.png" alt="Card image cap">
                   <div class="card-body">
@@ -17,6 +17,7 @@
             </div>
         {% endfor %}
     </div>
+    <br>
 
     <script>
         $(document).ready(function() {
@@ -30,7 +31,7 @@
       <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalCenterTitle">{{ modalData.title }}</h5>
+            <h5 class="modal-title" id="exampleModalCenterTitle">{{ title }}</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -38,7 +39,12 @@
             <form method="post" action="">
               <div class="modal-body">
                   {% from 'includes/_formhelpers.html' import render_field %}
-                  {{ modalData.body }}
+                  <center>
+                      <img src="{{ image }}" width="250" height="250">
+                  </center>
+                  <br><br>
+                  <p>Send an SMS of <b>{{ sms_text }}</b> to <b>{{ sms }}</b></p>
+                  <p>It will cost you <b>{{ prices[0] }} zł</b> (<b>{{ prices[1] }} zł</b> with taxes)</p>
                   <div class="form-group">
                         {{ render_field(form.name, class_="form-control") }}
                   </div>

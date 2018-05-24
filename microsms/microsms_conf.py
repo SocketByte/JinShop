@@ -1,6 +1,7 @@
 configuration = {
     'USER_ID': 2544,
     'SERVICE_ID': 3231,
+    'SMS_TEXT': 'MSMS.SOCKETBYTE',
     'PRICES': {
         71480: (1, 1.23),
         72480: (2, 2.46),

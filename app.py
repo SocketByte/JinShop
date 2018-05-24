@@ -1,3 +1,4 @@
+import configparser
 import hashlib
 
 import mcrcon
@@ -5,54 +6,72 @@ from flask import Flask, render_template, request, flash, redirect, url_for, ses
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 
-from util import vig
 from forms import RegisterForm, LoginForm, RecoveryForm, PasswordChangeForm, SmsShopForm
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
-from models import ModalData
 from sendmail import send_recovery_email
+from util import vig
 from util.randomstring import generate_random
 from util.util import authorized, get_epoch_time
 
-import configparser
-
+# Create default configuration file
 config = configparser.ConfigParser()
 config['Key'] = {
     'recaptcha_public_key': 'your recaptcha public key',
-    'recaptcha_private_key': 'your recaptcha private key'
+    'recaptcha_private_key': 'your recaptcha private key',
+}
+config['Rcon'] = {
+    'minecraft_rcon_host': 'localhost',
+    'minecraft_rcon_port': 25575,
+    'minecraft_rcon_password': 'rcon_password'
+}
+config['App'] = {
+    'address': 'localhost',
+    'port': 5000,
+    'secret_key': 'your session secret key',
+    'database_uri': 'mysql://root@localhost/minecraftshop?'
 }
 with open('configuration.ini', 'w') as configfile:
     config.write(configfile)
 
 # Change that to configuration.ini!
-config.read('secret_conf.ini')
+config.read('secret_conf.ini')  # Debug file for testing purposes
 
-RECAPTCHA_PUBLIC_KEY = config['Key']['recaptcha_public_key']
-RECAPTCHA_PRIVATE_KEY = config['Key']['recaptcha_private_key']
-minecraft_rcon_host = 'localhost'
-minecraft_rcon_port = 25575
-minecraft_rcon_password = 'rcon_password'
+# Global variables
+# Recaptcha keys
+recaptcha_public_key = config['Key']['recaptcha_public_key']
+recaptcha_private_key = config['Key']['recaptcha_private_key']
+# Minecraft RCON configuration
+minecraft_rcon_host = config['Rcon']['minecraft_rcon_host']
+minecraft_rcon_port = config['Rcon']['minecraft_rcon_port']
+minecraft_rcon_password = config['Rcon']['minecraft_rcon_password']
+# App configuration
+app_address = config['App']['address']
+app_port = config['App']['port']
 
-app_address = "localhost"
-app_port = 5000
-
+# Create Flask instance
 app = Flask(__name__, static_url_path='/static')
-app.secret_key = 'FX7CX4JOMChRZPETQkLSpBt3gfaIfc74'  # Feel free to change it
+app.secret_key = config['App']['secret_key']
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@localhost/minecraftshop?'
+app.config['SQLALCHEMY_DATABASE_URI'] = config['App']['database_uri']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['RECAPTCHA_PUBLIC_KEY'] = RECAPTCHA_PUBLIC_KEY
-app.config['RECAPTCHA_PRIVATE_KEY'] = RECAPTCHA_PRIVATE_KEY
+app.config['RECAPTCHA_PUBLIC_KEY'] = recaptcha_public_key
+app.config['RECAPTCHA_PRIVATE_KEY'] = recaptcha_private_key
+
+# Connect to the database and create tables
 database = SQLAlchemy(app)
 
+# Create MCRcon instance and connect to minecraft server
 rcon = mcrcon.MCRcon(minecraft_rcon_host,
                      minecraft_rcon_password,
-                     minecraft_rcon_port)
+                     int(minecraft_rcon_port))
 rcon.connect()
 
+# Create bCrypt instance
 bcrypt = Bcrypt(app)
 
 
+# Database models
 class Account(database.Model):
     __tablename__ = "accounts"
 
@@ -88,14 +107,11 @@ class RecoveryData(database.Model):
         return "http://" + app_address + ":" + str(app_port) + "/recover/" + self.secret_key
 
 
-def update_offers():
-    app.shop_offers = ShopData.query.all()
-
-
 class ShopData(database.Model):
     __tablename__ = "shop_data"
 
     id = database.Column('id', database.String(60), nullable=False, primary_key=True, unique=True)
+    image = database.Column('image', database.String(60), nullable=False)
     name = database.Column('name', database.String(60), nullable=False)
     description = database.Column('description', database.Text)
     sms = database.Column('sms_number', database.Integer)
@@ -121,15 +137,18 @@ class Voucher(database.Model):
 
 
 database.create_all()
+
+# Query all shop_offers from SQL and add test one if no offers available.
 shop_offers = ShopData.query.all()
 
 if len(shop_offers) == 0:
     data = ShopData('default', 'Default Shop Item',
                     'Default shop item to populate shop area')
     data.sms = configuration['REQUESTS'][1]
+    data.image = '/static/images/logo.png'
     database.session.add(data)
     database.session.commit()
-    update_offers()
+    app.shop_offers = ShopData.query.all()
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -263,21 +282,28 @@ def home():
 @app.route('/shop', methods=['GET', 'POST'])
 def shop():
     form = SmsShopForm(request.form)
-    modal_data = ModalData()
-    modal_data.title = 'SMS Transaction'
-    modal_data.body = 'Example SMS Body'
-    modal_data.buy_path = '/'
+    default = render_template('views/shop.html',
+                              sms_text='', image='', title='', sms='', prices=[],
+                              modalData=None,
+                              form=form,
+                              shop_offers=shop_offers)
     # Someone opened the modal!
     if request.method == 'POST' and not ('Finalize' in request.form.values()):
         name = None
         for key, value in request.form.items():
             if value == 'Buy':
                 name = key
+        shop_offer = None
+        for offer in shop_offers:
+            if offer.id == name:
+                shop_offer = offer
         return render_template('views/shop.html',
-                               modalData=modal_data,
+                               sms_text=configuration['SMS_TEXT'],
+                               image=shop_offer.image,
+                               title=shop_offer.name, sms=shop_offer.sms,
+                               prices=configuration['PRICES'][shop_offer.sms],
                                form=form,
-                               shop_offers=shop_offers,
-                               offerId=name)
+                               shop_offers=shop_offers, offerId=name)
     # Modal is validated successfully
     elif request.method == 'POST' and ('Finalize' in request.form.values()) and form.validate():
         name = None
@@ -294,29 +320,26 @@ def shop():
             if code is None or code is "" \
                     or code.isspace():
                 code = '-0'
+            voucher = False
             finalize_data = form.data['name'] + "," + code \
                             + "," + str(shop_offer.sms) + "," + shop_offer.id
         else:
+            voucher = True
             finalize_data = form.data['name'] + "," + form.data['voucher'] + ",-0," + shop_offer.id
 
         encoded = vig.encode(finalize_data)
 
-        return redirect(url_for('shop_finalize', encoded=encoded))
+        return redirect(url_for('shop_finalize', encoded=encoded, voucher=voucher))
     # Modal is invalidated
     elif request.method == 'POST' and ('Finalize' in request.form.values()):
-        return render_template('views/shop.html',
-                               modalData=modal_data,
-                               form=form,
-                               shop_offers=shop_offers)
+        flash('Invalid name or response code. Try again!', 'danger')
+        return default
 
-    return render_template('views/shop.html',
-                           modalData=None,
-                           form=form,
-                           shop_offers=shop_offers)
+    return default
 
 
-@app.route('/shop/finalize/<encoded>')
-def shop_finalize(encoded):
+@app.route('/shop/finalize/<encoded>/<voucher>')
+def shop_finalize(encoded, voucher):
     global delete_voucher
     decoded = vig.decode(encoded)
     split = decoded.split(',')
@@ -332,7 +355,7 @@ def shop_finalize(encoded):
     rewards = shop_offer.rewards
 
     # That means this is a 'voucher call' and code becomes a voucher
-    if number == "-0":
+    if voucher == 'True':
         voucher_data = Voucher.query.filter_by(key=code, offer=offer_id).first()
         if voucher_data is None:
             flash('That voucher does not exist or was already used!', 'danger')
