@@ -9,22 +9,33 @@
 <body background="/static/images/background.jpg">
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
-
     <div class="container mt-4">
         {% include 'includes/_navbar.html' %}
         {% block body_down %} {% endblock %}
         {% if request.path != "/" %}
-            <div class="container" style="background-color: whitesmoke;">
-                <br>
-                {% include 'includes/_messages.html' %}
-                <br>
-                <div class="ml-3">
-                    {% block body %} {% endblock %}
+            <div class="rounded" style="background-color: whitesmoke">
+                <div class="container">
+                    <br>
+                    {% include 'includes/_messages.html' %}
+                    <br>
+                    <div class="ml-3">
+                        {% block body %} {% endblock %}
+                    </div>
+                    <br>
                 </div>
-                <br>
             </div>
         {% else %}
             {% include 'includes/_messages.html' %}
+        {% endif %}
+
+        {% if not 'panel' in request.path %}
+            <div class="rounded mt-3" style="background-color: whitesmoke; opacity: 0.8">
+                <div class="container-fluid ml-2 pt-4">
+                    <p class="lead">Last customers</p>
+                    {% include 'includes/_heads.html' %}
+                    <br>
+                </div>
+            </div>
         {% endif %}
     </div>
 </body>

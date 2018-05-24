@@ -18,9 +18,11 @@
         <div class="form-group">
             {{ render_field(form.confirm_password, class_="form-control") }}
         </div>
-        <div class="form-group">
-            {{ render_field(form.recaptcha) }}
-        </div>
+        {% if 'True' in captcha %}
+            <div class="form-group">
+                {{ render_field(form.recaptcha) }}
+            </div>
+        {% endif %}
         <p>
             <input type="submit" class="btn btn-primary" value="Register">
         </p>

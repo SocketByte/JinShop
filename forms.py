@@ -3,15 +3,18 @@ from flask_wtf import RecaptchaField, FlaskForm
 from wtforms import Form, StringField, PasswordField, validators
 
 
-class RegisterForm(FlaskForm):
-    username = StringField('Name', [validators.Length(min=1, max=30), validators.DataRequired()])
-    email = StringField('Email', [validators.DataRequired(), validators.Email()])
-    password = PasswordField('Password', [
-        validators.DataRequired(),
-        validators.EqualTo('confirm_password', message="Passwords do not match")
-    ])
-    confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
-    recaptcha = RecaptchaField()
+def get_register_form(form, captcha):
+    class RegisterForm(FlaskForm):
+        username = StringField('Name', [validators.Length(min=1, max=30), validators.DataRequired()])
+        email = StringField('Email', [validators.DataRequired(), validators.Email()])
+        password = PasswordField('Password', [
+            validators.DataRequired(),
+            validators.EqualTo('confirm_password', message="Passwords do not match")
+        ])
+        confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
+        if 'True' in captcha:
+            recaptcha = RecaptchaField()
+    return RegisterForm(form)
 
 
 class LoginForm(Form):

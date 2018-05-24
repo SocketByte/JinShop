@@ -1,0 +1,14 @@
+<script type="text/javascript">
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+</script>
+<ul class="list-inline ml-2">
+    {% for head in heads[:17] %}
+        <li class="list-inline-item">
+            <a data-toggle="tooltip" data-placement="bottom" title="{{ head }}">
+                <img src='http://cravatar.eu/avatar/{{ head }}/48.png' />
+            </a>
+        </li>
+    {% endfor %}
+</ul>

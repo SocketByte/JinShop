@@ -6,7 +6,9 @@ from flask import Flask, render_template, request, flash, redirect, url_for, ses
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 
-from forms import RegisterForm, LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form
+from forms import LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form, \
+    get_register_form
+from heads import HeadManager
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
 from sendmail import send_recovery_email
@@ -29,7 +31,8 @@ config['App'] = {
     'address': 'localhost',
     'port': 5000,
     'secret_key': 'your session secret key',
-    'database_uri': 'mysql://root@localhost/minecraftshop?'
+    'database_uri': 'mysql://root@localhost/minecraftshop?',
+    'captcha': False
 }
 config['Permissions'] = {
     'admins': 'SocketByte,SomeoneElse'
@@ -74,6 +77,9 @@ rcon.connect()
 
 # Create bCrypt instance
 bcrypt = Bcrypt(app)
+
+# Create head manager for last buyers
+heads = HeadManager()
 
 
 # Database models
@@ -166,9 +172,9 @@ if len(shop_offers) == 0:
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegisterForm(request.form)
-    if request.method == 'POST' and len(form.errors) == 0 \
-            and len(form.recaptcha.errors) == 0:
+    captcha = config['App']['captcha']
+    form = get_register_form(request.form, captcha)
+    if form.validate_on_submit():
         name = form.data['username']
         email = form.data['email']
 
@@ -176,7 +182,7 @@ def register():
         query_email = Account.query.filter_by(email=name).first()
         if query_name or query_email is not None:
             flash("There's already someone with that nickname or email!", 'danger')
-            return render_template('views/register.html', form=form)
+            return render_template('views/register.html', form=form, captcha=captcha)
 
         password = bcrypt.generate_password_hash(form.data['password'])
 
@@ -188,7 +194,7 @@ def register():
         flash('You are now registered!', 'success')
         return redirect(url_for('home'))
 
-    return render_template('views/register.html', form=form)
+    return render_template('views/register.html', form=form, captcha=captcha)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -204,7 +210,7 @@ def login():
                 session['logged_in'] = True
                 session['username'] = name
                 session['email'] = account.email
-                session['minecraft_name'] = name
+                session['minecraft_name'] = account.minecraft_name
 
                 flash("You're now logged in!", 'success')
                 return redirect(url_for('panel'))
@@ -270,6 +276,7 @@ def recover(secret_key):
 
     return render_template('views/recover.html', form=form)
 
+
 # Control Panel Routes
 @app.route('/panel')
 @authorized
@@ -299,13 +306,13 @@ def panel_account():
             if current_password != new_password:
                 if bcrypt.check_password_hash(account.password, current_password):
                     account.password = bcrypt.generate_password_hash(new_password)
+                    changed = True
                 else:
                     flash('Invalid current password.', 'danger')
 
         if changed:
             flash('Successfully saved your preferences.', 'success')
             database.session.commit()
-
     return render_template('views/panel.html', tab='account', admins=admins, form=form)
 
 
@@ -437,10 +444,16 @@ def shop_finalize(encoded, voucher):
 
 
 def apply_rewards(username, rewards):
+    heads.container.append(username)
     flash('Success! Your rewards were transfered to ' + username, 'success')
     split = rewards.split(';')
     for command in split:
         rcon.command(command.replace('{PLAYER}', username))
+
+
+@app.context_processor
+def inject_heads():
+    return dict(heads=heads.container)
 
 
 # Errors
