@@ -1,23 +1,25 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-    <h1 class="display-4">Control Panel</h1>
+    <h1 class="display-3">Control Panel</h1>
     <p class="lead">Welcome back, <b>{{ session['username'] }}</b></p>
     <hr class="my-4">
     <br>
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a class="nav-link {% if tab == 'home' %} active {% endif %}"
-           href="/panel/home">Home</a>
+        <a class="nav-link {% if tab == 'account' %} active {% endif %}"
+           href="/panel/account">Account</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'creds' %} active {% endif %}"
-           href="/panel/creds">Credentials</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'other' %} active {% endif %}"
-           href="/panel/other">Other Stuff</a>
-      </li>
+      {% if session['username'] in admins %}
+          <li class="nav-item">
+            <a class="nav-link {% if tab == 'services' %} active {% endif %}"
+               href="/panel/services">Services</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if tab == 'vouchers' %} active {% endif %}"
+               href="/panel/vouchers">Vouchers</a>
+          </li>
+      {% endif %}
     </ul>
     <br>
     {% include 'includes/panel/' + tab + ".html" %}

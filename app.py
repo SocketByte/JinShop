@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, flash, redirect, url_for, ses
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 
-from forms import RegisterForm, LoginForm, RecoveryForm, PasswordChangeForm, SmsShopForm
+from forms import RegisterForm, LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
 from sendmail import send_recovery_email
@@ -31,11 +31,16 @@ config['App'] = {
     'secret_key': 'your session secret key',
     'database_uri': 'mysql://root@localhost/minecraftshop?'
 }
+config['Permissions'] = {
+    'admins': 'SocketByte,SomeoneElse'
+}
 with open('configuration.ini', 'w') as configfile:
     config.write(configfile)
 
 # Change that to configuration.ini!
 config.read('secret_conf.ini')  # Debug file for testing purposes
+
+admins = config['Permissions']['admins'].split(',')
 
 # Global variables
 # Recaptcha keys
@@ -77,6 +82,7 @@ class Account(database.Model):
 
     id = database.Column('id', database.Integer, autoincrement=True, primary_key=True)
     name = database.Column('username', database.String(30), nullable=False, unique=True)
+    minecraft_name = database.Column('mc_name', database.String(16), nullable=False, unique=False)
     email = database.Column('email', database.String(30), nullable=False, unique=True)
     password = database.Column('password', database.String(100), nullable=False)
 
@@ -138,6 +144,13 @@ class Voucher(database.Model):
 
 database.create_all()
 
+
+# Other models
+class PanelModel(object):
+    def __init__(self, account_form):
+        self.account_form = account_form
+
+
 # Query all shop_offers from SQL and add test one if no offers available.
 shop_offers = ShopData.query.all()
 
@@ -154,19 +167,21 @@ if len(shop_offers) == 0:
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
-
-    if request.method == 'POST' and form.validate():
+    if request.method == 'POST' and len(form.errors) == 0 \
+            and len(form.recaptcha.errors) == 0:
         name = form.data['username']
         email = form.data['email']
 
-        query = Account.query.filter_by(name=name, email=email).first()
-        if query is not None:
+        query_name = Account.query.filter_by(name=name).first()
+        query_email = Account.query.filter_by(email=name).first()
+        if query_name or query_email is not None:
             flash("There's already someone with that nickname or email!", 'danger')
             return render_template('views/register.html', form=form)
 
         password = bcrypt.generate_password_hash(form.data['password'])
 
         account = Account(name, email, password)
+        account.minecraft_name = name
         database.session.add(account)
         database.session.commit()
 
@@ -189,9 +204,10 @@ def login():
                 session['logged_in'] = True
                 session['username'] = name
                 session['email'] = account.email
+                session['minecraft_name'] = name
 
                 flash("You're now logged in!", 'success')
-                return redirect(url_for('panel', tab='home'))
+                return redirect(url_for('panel'))
             else:
                 flash('Wrong password', 'danger')
         else:
@@ -254,11 +270,49 @@ def recover(secret_key):
 
     return render_template('views/recover.html', form=form)
 
-
-@app.route('/panel/<tab>')
+# Control Panel Routes
+@app.route('/panel')
 @authorized
-def panel(tab):
-    return render_template('views/panel.html', tab=tab)
+def panel():
+    return redirect(url_for('panel_account'))
+
+
+@app.route('/panel/account', methods=['GET', 'POST'])
+@authorized
+def panel_account():
+    form = get_account_form(request.form)
+    if request.method == 'POST' and form.validate():
+        account = Account.query.filter_by(name=session['username'], email=session['email']).first()
+        changed = False
+        if form.data['minecraft_name'] != session['minecraft_name']:
+            account.minecraft_name = form.data['minecraft_name']
+            session['minecraft_name'] = account.minecraft_name
+            changed = True
+        if form.data['email'] != session['email']:
+            account.email = form.data['email']
+            session['email'] = account.email
+            changed = True
+        if form.data['current_password'] and form.data['new_password'] is not '':
+            current_password = form.data['current_password']
+            new_password = form.data['new_password']
+
+            if current_password != new_password:
+                if bcrypt.check_password_hash(account.password, current_password):
+                    account.password = bcrypt.generate_password_hash(new_password)
+                else:
+                    flash('Invalid current password.', 'danger')
+
+        if changed:
+            flash('Successfully saved your preferences.', 'success')
+            database.session.commit()
+
+    return render_template('views/panel.html', tab='account', admins=admins, form=form)
+
+
+@app.route('/panel/services', methods=['GET', 'POST'])
+@authorized
+def panel_services():
+    return render_template('views/panel.html', tab='services', admins=admins)
 
 
 @app.route('/logout')
@@ -281,7 +335,11 @@ def home():
 
 @app.route('/shop', methods=['GET', 'POST'])
 def shop():
-    form = SmsShopForm(request.form)
+    if 'logged_in' in session:
+        form = get_shop_form(request.form)
+        form.name.data = session['minecraft_name']
+    else:
+        form = get_shop_form(request.form)
     default = render_template('views/shop.html',
                               sms_text='', image='', title='', sms='', prices=[],
                               modalData=None,
@@ -383,6 +441,21 @@ def apply_rewards(username, rewards):
     split = rewards.split(';')
     for command in split:
         rcon.command(command.replace('{PLAYER}', username))
+
+
+# Errors
+@app.errorhandler(500)
+def error_internal(e):
+    return render_template('views/error.html',
+                           errorCode=500,
+                           body='Oh no! Something went wrong!')
+
+
+@app.errorhandler(404)
+def error_not_found(e):
+    return render_template('views/error.html',
+                           errorCode=404,
+                           body='Oh no! The page you are looking for is missing!')
 
 
 if __name__ == '__main__':

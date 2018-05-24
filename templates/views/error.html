@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+
+{% block body_down %}
+    <div class="jumbotron" style="background-color: indianred; opacity: 0.8">
+        <h1 class="display-4" style="color:white">{{ errorCode }} Error</h1>
+        <p class="lead" style="color:white">{{ body }}</p>
+        <hr class="my-4">
+        <p style="color:white">Please go back to <a href="/">home page</a> immediately.</p>
+    </div>
+{% endblock %}
