@@ -1,10 +1,14 @@
 from flask import session
 from flask_wtf import RecaptchaField, FlaskForm
-from wtforms import Form, StringField, PasswordField, validators
+from flask_wtf.file import FileField, FileRequired, FileAllowed
+from flask_uploads import UploadSet, IMAGES
+from wtforms import Form, StringField, PasswordField, validators, TextAreaField, IntegerField, SelectField
+
+from microsms.microsms_conf import configuration
 
 
 def get_register_form(form, captcha):
-    class RegisterForm(FlaskForm):
+    class RegisterForm(Form):
         username = StringField('Name', [validators.Length(min=1, max=30), validators.DataRequired()])
         email = StringField('Email', [validators.DataRequired(), validators.Email()])
         password = PasswordField('Password', [
@@ -61,3 +65,14 @@ def get_account_form(form):
         new_password = PasswordField('New password')
 
     return AccountFormClass(form)
+
+
+choices = configuration['DROPDOWN']
+class ServiceForm(FlaskForm):
+    image = FileField('Image', [FileRequired(), FileAllowed(['png', 'jpg', 'jpeg'], 'You can upload only images!')])
+    name = StringField('Name', [validators.DataRequired(), validators.Length(max=60)])
+    id = StringField('Id', [validators.DataRequired(), validators.NoneOf(' '), validators.Length(max=60)])
+    description = TextAreaField('Description', [validators.DataRequired(), validators.Length(min=10, max=400)])
+    sms_number = SelectField('Price (PLN)', choices=choices, validators=[validators.DataRequired()])
+    rewards = TextAreaField('Commands to execute after purchase', [validators.NoneOf('/')])
+

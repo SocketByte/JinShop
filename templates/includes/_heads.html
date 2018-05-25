@@ -4,9 +4,10 @@
     })
 </script>
 <ul class="list-inline ml-2">
-    {% for head in heads[:17] %}
+    {% for head in heads.container[:17] %}
         <li class="list-inline-item">
-            <a data-toggle="tooltip" data-placement="bottom" title="{{ head }}">
+            <a data-toggle="tooltip" data-placement="bottom" data-html="true"
+               title="{{ head }}<br><b><em>{{ heads.services[head] }}</em></b>">
                 <img src='http://cravatar.eu/avatar/{{ head }}/48.png' />
             </a>
         </li>

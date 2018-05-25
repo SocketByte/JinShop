@@ -5,7 +5,7 @@
         {% for offer in shop_offers %}
             <div class="col-sm-4 {% if loop.index > 3 %} mt-5 {% endif %}">
                 <div class="card" style="width: 18rem;">
-                  <img class="card-img-top" src="/static/images/logo.png" alt="Card image cap">
+                  <img class="card-img-top" src="{{ offer.image }}" alt="Card image cap">
                   <div class="card-body">
                     <h5 class="card-title">{{ offer.name }}</h5>
                     <p class="card-text">{{ offer.description }}</p>

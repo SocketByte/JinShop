@@ -5,9 +5,10 @@ import mcrcon
 from flask import Flask, render_template, request, flash, redirect, url_for, session
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import secure_filename
 
 from forms import LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form, \
-    get_register_form
+    get_register_form, ServiceForm
 from heads import HeadManager
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
@@ -157,19 +158,6 @@ class PanelModel(object):
         self.account_form = account_form
 
 
-# Query all shop_offers from SQL and add test one if no offers available.
-shop_offers = ShopData.query.all()
-
-if len(shop_offers) == 0:
-    data = ShopData('default', 'Default Shop Item',
-                    'Default shop item to populate shop area')
-    data.sms = configuration['REQUESTS'][1]
-    data.image = '/static/images/logo.png'
-    database.session.add(data)
-    database.session.commit()
-    app.shop_offers = ShopData.query.all()
-
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     captcha = config['App']['captcha']
@@ -317,9 +305,62 @@ def panel_account():
 
 
 @app.route('/panel/services', methods=['GET', 'POST'])
-@authorized
 def panel_services():
-    return render_template('views/panel.html', tab='services', admins=admins)
+    return render_template('views/panel.html', tab='services', admins=admins, services=ShopData.query.all())
+
+
+@app.route('/panel/services/add', methods=['GET', 'POST'])
+@authorized
+def panel_services_add():
+    form = ServiceForm()
+    if form.validate_on_submit():
+        shop_id = form.data['id']
+        shop_name = form.data['name']
+
+        query = ShopData.query.filter_by(id=shop_id, name=shop_name).first()
+        if query is not None:
+            flash('There is already a service with that ID or name!', 'danger')
+            return render_template('views/panel.html', tab='service_add', admins=admins, form=form)
+
+        shop_image = secure_filename(form.image.data.filename)
+        shop_desc = form.data['description']
+        shop_rewards = form.data['rewards']
+        shop_number = form.data['sms_number']
+        shop_commands = shop_rewards.replace('/', '')
+
+        path = 'static/images/services/' + shop_image
+        form.image.data.save(path)
+
+        shop_data = ShopData(shop_id, shop_name, shop_desc, shop_commands)
+        shop_data.sms = shop_number
+        shop_data.image = path
+
+        database.session.add(shop_data)
+        database.session.commit()
+
+        flash('Successfully added a new service!', 'success')
+        return redirect(url_for('panel_services'))
+
+    return render_template('views/panel.html', tab='service_add', admins=admins, form=form)
+
+
+@app.route('/panel/services/delete/<id>', methods=['GET', 'POST'])
+def panel_services_delete(id):
+    service = ShopData.query.filter_by(id=id).first()
+    database.session.delete(service)
+    database.session.commit()
+
+    return redirect(url_for('panel_services'))
+
+
+@app.route('/panel/services/modify/<id>', methods=['GET', 'POST'])
+def panel_services_modify(id):
+    service = ShopData.query.filter_by(id=id).first()
+    form = ServiceForm(request.form)
+
+    #form.image.data = service.
+
+    return render_template('views/panel.html', tab='service_modify', admins=admins, form=form)
 
 
 @app.route('/logout')
@@ -333,7 +374,7 @@ def logout():
 @app.route('/')
 def home():
     if 'welcome_message' not in session:
-        flash('Welcome to JinShop! You will not see this message again, '
+        flash('Welcome to JinShop! '
               'I just want to thank you for testing this site. Have a nice day!', 'primary')
         session['welcome_message'] = True
 
@@ -342,6 +383,7 @@ def home():
 
 @app.route('/shop', methods=['GET', 'POST'])
 def shop():
+    offers = ShopData.query.all()
     if 'logged_in' in session:
         form = get_shop_form(request.form)
         form.name.data = session['minecraft_name']
@@ -351,7 +393,7 @@ def shop():
                               sms_text='', image='', title='', sms='', prices=[],
                               modalData=None,
                               form=form,
-                              shop_offers=shop_offers)
+                              shop_offers=offers)
     # Someone opened the modal!
     if request.method == 'POST' and not ('Finalize' in request.form.values()):
         name = None
@@ -359,7 +401,7 @@ def shop():
             if value == 'Buy':
                 name = key
         shop_offer = None
-        for offer in shop_offers:
+        for offer in offers:
             if offer.id == name:
                 shop_offer = offer
         return render_template('views/shop.html',
@@ -368,7 +410,7 @@ def shop():
                                title=shop_offer.name, sms=shop_offer.sms,
                                prices=configuration['PRICES'][shop_offer.sms],
                                form=form,
-                               shop_offers=shop_offers, offerId=name)
+                               shop_offers=offers, offerId=name)
     # Modal is validated successfully
     elif request.method == 'POST' and ('Finalize' in request.form.values()) and form.validate():
         name = None
@@ -376,7 +418,7 @@ def shop():
             if value == 'Finalize':
                 name = key
         shop_offer = None
-        for offer in shop_offers:
+        for offer in offers:
             if offer.id == name:
                 shop_offer = offer
         code = form.data['code']
@@ -405,6 +447,8 @@ def shop():
 
 @app.route('/shop/finalize/<encoded>/<voucher>')
 def shop_finalize(encoded, voucher):
+    offers = ShopData.query.all()
+
     global delete_voucher
     decoded = vig.decode(encoded)
     split = decoded.split(',')
@@ -414,7 +458,7 @@ def shop_finalize(encoded, voucher):
     offer_id = split[3]
 
     shop_offer = ""
-    for offer in shop_offers:
+    for offer in offers:
         if offer.id == offer_id:
             shop_offer = offer
     rewards = shop_offer.rewards
@@ -431,20 +475,21 @@ def shop_finalize(encoded, voucher):
         else:
             delete_voucher = False
 
-        apply_rewards(name, rewards)
+        apply_rewards(name, rewards, shop_offer.name)
 
         if delete_voucher:
             database.session.delete(voucher_data)
         database.session.commit()
     elif check_code(number, code):
-        apply_rewards(name, rewards)
+        apply_rewards(name, rewards, shop_offer.name)
     else:
         flash('Invalid code, rewards not applied', 'danger')
     return redirect(url_for('shop'))
 
 
-def apply_rewards(username, rewards):
+def apply_rewards(username, rewards, name):
     heads.container.append(username)
+    heads.services[username] = name
     flash('Success! Your rewards were transfered to ' + username, 'success')
     split = rewards.split(';')
     for command in split:
@@ -453,7 +498,7 @@ def apply_rewards(username, rewards):
 
 @app.context_processor
 def inject_heads():
-    return dict(heads=heads.container)
+    return dict(heads=heads)
 
 
 # Errors

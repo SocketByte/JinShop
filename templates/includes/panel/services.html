@@ -1,1 +1,22 @@
-<p>Hello, I'm <code>includes/panel/creds.html</code> here!</p>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Id</th>
+      <th scope="col">Name</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for service in services %}
+        <tr>
+            <th scope="row">{{ service.id }}</th>
+            <td>{{ service.name }}</td>
+            <td>
+                <a href="/panel/services/modify/{{ service.id }}">Edit</a>
+                <a href="/panel/services/delete/{{ service.id }}" style="color:red">Delete</a>
+            </td>
+        </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<a class="btn btn-primary" href="/panel/services/add">Add new service</a>
