@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 
 from forms import LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form, \
-    get_register_form, ServiceForm, ServiceFormBlocked, get_voucher_form
+    ServiceForm, ServiceFormBlocked, get_voucher_form, get_config_form, RegisterForm
 from heads import HeadManager
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
@@ -33,13 +33,18 @@ config['App'] = {
     'port': 5000,
     'secret_key': 'your session secret key',
     'database_uri': 'mysql://root@localhost/minecraftshop?',
-    'captcha': False
 }
 config['Permissions'] = {
     'admins': 'SocketByte,SomeoneElse'
 }
-with open('configuration.ini', 'w') as configfile:
-    config.write(configfile)
+
+
+def save():
+    with open('configuration.ini', 'w') as configfile:
+        config.write(configfile)
+
+
+save()
 
 # Change that to configuration.ini!
 config.read('secret_conf.ini')  # Debug file for testing purposes
@@ -149,16 +154,9 @@ class Voucher(database.Model):
 database.create_all()
 
 
-# Other models
-class PanelModel(object):
-    def __init__(self, account_form):
-        self.account_form = account_form
-
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    captcha = config['App']['captcha']
-    form = get_register_form(request.form, captcha)
+    form = RegisterForm()
     if form.validate_on_submit():
         name = form.data['username']
         email = form.data['email']
@@ -167,7 +165,7 @@ def register():
         query_email = Account.query.filter_by(email=name).first()
         if query_name or query_email is not None:
             flash("There's already someone with that nickname or email!", 'danger')
-            return render_template('views/register.html', form=form, captcha=captcha)
+            return render_template('views/register.html', form=form)
 
         password = bcrypt.generate_password_hash(form.data['password'])
 
@@ -179,7 +177,7 @@ def register():
         flash('You are now registered!', 'success')
         return redirect(url_for('home'))
 
-    return render_template('views/register.html', form=form, captcha=captcha)
+    return render_template('views/register.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -422,6 +420,22 @@ def panel_vouchers():
         return render_template('views/panel.html', tab='vouchers', admins=admins, form=form, vouchers=vouchers)
 
     return render_template('views/panel.html', tab='vouchers', admins=admins, form=form)
+
+
+@app.route('/panel/config', methods=['GET', 'POST'])
+def panel_configuration():
+    form = get_config_form(request.form, config)
+
+    if request.method == 'POST' and form.validate():
+        for header in config:
+            for key in config[header]:
+                config[header][key] = form.data[key]
+        save()
+
+        flash('Your settings have been saved!', 'success')
+        return redirect(url_for('panel_configuration'))
+
+    return render_template('views/panel.html', tab='config', admins=admins, form=form, config=config)
 
 
 @app.route('/logout')

@@ -1,0 +1,17 @@
+<h1 class="display-4">Configuration</h1>
+<p class="lead">Change basic server parameters</p>
+<hr class="my-4">
+{% from 'includes/_formhelpers.html' import render_field %}
+<form method="post" action="" enctype="multipart/form-data">
+    {% for header in config %}
+        {% for key in config[header] %}
+            <div class="form-group">
+                {{ render_field(form[key], class_="form-control") }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+    {{ form.csrf_token }}
+    <p>
+        <input type="submit" class="btn btn-primary" value="Save">
+    </p>
+</form>

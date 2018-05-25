@@ -7,19 +7,15 @@ from wtforms import Form, StringField, PasswordField, validators, TextAreaField,
 from microsms.microsms_conf import configuration
 
 
-def get_register_form(form, captcha):
-    class RegisterForm(Form):
-        username = StringField('Name', [validators.Length(min=1, max=30), validators.DataRequired()])
-        email = StringField('Email', [validators.DataRequired(), validators.Email()])
-        password = PasswordField('Password', [
-            validators.DataRequired(),
-            validators.EqualTo('confirm_password', message="Passwords do not match")
-        ])
-        confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
-        if 'True' in captcha:
-            recaptcha = RecaptchaField()
-
-    return RegisterForm(form)
+class RegisterForm(FlaskForm):
+    username = StringField('Name', [validators.Length(min=1, max=30), validators.DataRequired()])
+    email = StringField('Email', [validators.DataRequired(), validators.Email()])
+    password = PasswordField('Password', [
+        validators.DataRequired(),
+        validators.EqualTo('confirm_password', message="Passwords do not match")
+    ])
+    confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
+    recaptcha = RecaptchaField()
 
 
 class LoginForm(Form):
@@ -95,11 +91,25 @@ class ServiceFormBlocked(FlaskForm):
 def get_voucher_form(form, services):
     class VoucherForm(Form):
         amount = StringField('Vouchers to generate', [validators.DataRequired(),
-                                                       validators.Length(max=3)])
+                                                      validators.Length(max=3)])
         uses = StringField('Uses per voucher', [validators.DataRequired(), validators.Length(max=3)])
 
         choices = [('__all__', 'All')]
         for service in services:
             choices.append((service.id, service.name))
         id = SelectField('Valid for', choices=choices)
+
     return VoucherForm(form)
+
+
+def get_config_form(form, config):
+    table = config
+
+    class ConfigForm(Form):
+        pass
+
+    for header in table:
+        for key in table[header]:
+            setattr(ConfigForm, key, StringField(default=table[header][key]))
+
+    return ConfigForm(form)
