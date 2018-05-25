@@ -18,6 +18,7 @@ def get_register_form(form, captcha):
         confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
         if 'True' in captcha:
             recaptcha = RecaptchaField()
+
     return RegisterForm(form)
 
 
@@ -48,6 +49,7 @@ def get_shop_form(form):
         else:
             name = StringField('Minecraft name', [validators.DataRequired()])
         voucher = StringField('Voucher (optional)')
+
     return SmsShopForm(form)
 
 
@@ -68,11 +70,36 @@ def get_account_form(form):
 
 
 choices = configuration['DROPDOWN']
+
+
 class ServiceForm(FlaskForm):
     image = FileField('Image', [FileRequired(), FileAllowed(['png', 'jpg', 'jpeg'], 'You can upload only images!')])
     name = StringField('Name', [validators.DataRequired(), validators.Length(max=60)])
     id = StringField('Id', [validators.DataRequired(), validators.NoneOf(' '), validators.Length(max=60)])
     description = TextAreaField('Description', [validators.DataRequired(), validators.Length(min=10, max=400)])
     sms_number = SelectField('Price (PLN)', choices=choices, validators=[validators.DataRequired()])
-    rewards = TextAreaField('Commands to execute after purchase', [validators.NoneOf('/')])
+    rewards = TextAreaField('Commands to execute after purchase')
 
+
+class ServiceFormBlocked(FlaskForm):
+    image = FileField('Image', [FileRequired(), FileAllowed(['png', 'jpg', 'jpeg'], 'You can upload only images!')])
+    name = StringField('Name', [validators.DataRequired(), validators.Length(max=60)])
+    id = StringField('Id', [validators.DataRequired(), validators.NoneOf(' '),
+                            validators.Length(max=60)],
+                     render_kw={'readonly': True})
+    description = TextAreaField('Description', [validators.DataRequired(), validators.Length(min=10, max=400)])
+    sms_number = SelectField('Price (PLN)', choices=choices, validators=[validators.DataRequired()])
+    rewards = TextAreaField('Commands to execute after purchase')
+
+
+def get_voucher_form(form, services):
+    class VoucherForm(Form):
+        amount = StringField('Vouchers to generate', [validators.DataRequired(),
+                                                       validators.Length(max=3)])
+        uses = StringField('Uses per voucher', [validators.DataRequired(), validators.Length(max=3)])
+
+        choices = [('__all__', 'All')]
+        for service in services:
+            choices.append((service.id, service.name))
+        id = SelectField('Valid for', choices=choices)
+    return VoucherForm(form)

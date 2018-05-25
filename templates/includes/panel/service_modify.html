@@ -1,10 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+<h1 class="display-4">Modify service</h1>
+<p class="lead">Modify your service here</p>
+<hr class="my-4">
+{% from 'includes/_formhelpers.html' import render_field %}
+<form method="post" action="" enctype="multipart/form-data">
+    <div class="form-group">
+        {{ render_field(form.image, class_="form-control-file") }}
+    </div>
+    <div class="form-group">
+        {{ render_field(form.id, class_="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ render_field(form.name, class_="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ render_field(form.description, class_="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ render_field(form.sms_number, class_="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ render_field(form.rewards, class_="form-control") }}
+        <br>
+        <small><b>Instructions:</b></small><br>
+        <small>- Put <b>;</b> to make new command</small><br>
+        <small>- Do not put <b>/</b></small><br>
+        <small>- use <em>{PLAYER}</em> to get user name</small><br>
+    </div>
+    {{ form.csrf_token }}
+    <p>
+        <input type="submit" class="btn btn-primary" value="Modify">
+    </p>
+</form>

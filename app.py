@@ -2,13 +2,13 @@ import configparser
 import hashlib
 
 import mcrcon
-from flask import Flask, render_template, request, flash, redirect, url_for, session
+from flask import Flask, render_template, request, flash, redirect, url_for, session, render_template_string
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 
 from forms import LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form, \
-    get_register_form, ServiceForm
+    get_register_form, ServiceForm, ServiceFormBlocked, get_voucher_form
 from heads import HeadManager
 from microsms.microsms import check_code
 from microsms.microsms_conf import configuration
@@ -130,14 +130,11 @@ class ShopData(database.Model):
     sms = database.Column('sms_number', database.Integer)
     rewards = database.Column('reward_command', database.Text)
 
-    def __init__(self, id, name, description, *rewards):
+    def __init__(self, id, name, description, rewards):
         self.id = id
         self.name = name
         self.description = description
-        builder = ""
-        for reward in rewards:
-            builder.join(';' + reward)
-        self.rewards = builder.replace(';', '', 1)
+        self.rewards = rewards
 
 
 class Voucher(database.Model):
@@ -353,14 +350,78 @@ def panel_services_delete(id):
     return redirect(url_for('panel_services'))
 
 
-@app.route('/panel/services/modify/<id>', methods=['GET', 'POST'])
-def panel_services_modify(id):
-    service = ShopData.query.filter_by(id=id).first()
-    form = ServiceForm(request.form)
+@app.route('/panel/services/modify/<service_id>', methods=['GET', 'POST'])
+def panel_services_modify(service_id):
+    service = ShopData.query.filter_by(id=service_id).first()
+    form = ServiceFormBlocked()
 
-    #form.image.data = service.
+    if request.method == 'POST' and form.validate_on_submit():
+        shop_id = form.data['id']
+        shop_name = form.data['name']
+
+        query = ShopData.query.filter_by(id=shop_id, name=shop_name).first()
+        if query is None:
+            flash('Error occured, unknown service.', 'danger')
+            return render_template('views/panel.html', tab='service_add', admins=admins, form=form)
+
+        shop_image = secure_filename(form.image.data.filename)
+        shop_desc = form.data['description']
+        shop_rewards = form.data['rewards']
+        shop_number = form.data['sms_number']
+        shop_commands = shop_rewards.replace('/', '')
+
+        path = 'static/images/services/' + shop_image
+        form.image.data.save(path)
+
+        query.image = path
+        query.description = shop_desc
+        query.name = shop_name
+        query.sms = shop_number
+        query.rewards = shop_commands
+
+        database.session.commit()
+        flash('Successfully modified service with id: ' + shop_id, 'success')
+        return redirect(url_for('panel_services'))
+    elif request.method == 'POST':
+        return render_template('views/panel.html', tab='service_modify', admins=admins, form=form)
+
+    form.id.data = service.id
+    form.rewards.data = service.rewards
+    form.sms_number.data = str(service.sms)
+    form.name.data = service.name
+    form.description.data = service.description
 
     return render_template('views/panel.html', tab='service_modify', admins=admins, form=form)
+
+
+@app.route('/panel/vouchers', methods=['GET', 'POST'])
+def panel_vouchers():
+    form = get_voucher_form(request.form, ShopData.query.all())
+
+    if request.method == 'POST' and form.validate():
+        for_id = form.data['id']
+        try:
+            uses = int(form.data['uses'])
+            amount = int(form.data['amount'])
+        except Exception as e:
+            flash('Invalid input (did you provide text instead of numbers?)', 'danger')
+            return redirect(url_for('panel_vouchers'))
+
+        vouchers = []
+        for i in range(amount):
+            random = generate_random(8)
+            vouchers.append(random)
+            voucher = Voucher()
+            voucher.key = random
+            voucher.offer = for_id
+            voucher.uses = uses
+            database.session.add(voucher)
+
+        database.session.commit()
+
+        return render_template('views/panel.html', tab='vouchers', admins=admins, form=form, vouchers=vouchers)
+
+    return render_template('views/panel.html', tab='vouchers', admins=admins, form=form)
 
 
 @app.route('/logout')
