@@ -1,3 +1,24 @@
+import requests
+
+
+def check_code(number, code):
+    # You can easily change the parsing alghoritm for different SMS service providers
+    response = url_response("https://microsms.pl/api/check.php?userid={}&number={}&code={}&serviceid={}"
+                            .format(configuration['USER_ID'], number, code, configuration['SERVICE_ID']))
+
+    parsed = response.split(',')
+    if parsed[0] is '1':
+        return True  # valid code
+    elif parsed[0] is '0':
+        return False  # invalid code
+    else:
+        return False  # invalid request or other error
+
+
+def url_response(url):
+    return str(requests.get(url).text)
+
+
 configuration = {
     'USER_ID': 2544,
     'SERVICE_ID': 3231,

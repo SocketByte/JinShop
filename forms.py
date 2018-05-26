@@ -1,10 +1,9 @@
 from flask import session
 from flask_wtf import RecaptchaField, FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
-from flask_uploads import UploadSet, IMAGES
-from wtforms import Form, StringField, PasswordField, validators, TextAreaField, IntegerField, SelectField
+from wtforms import Form, StringField, PasswordField, validators, TextAreaField, SelectField
 
-from microsms.microsms_conf import configuration
+from microsms import configuration
 
 
 class RegisterForm(FlaskForm):
@@ -15,7 +14,7 @@ class RegisterForm(FlaskForm):
         validators.EqualTo('confirm_password', message="Passwords do not match")
     ])
     confirm_password = PasswordField('Confirm Password', [validators.DataRequired()])
-    recaptcha = RecaptchaField()
+    #recaptcha = RecaptchaField()
 
 
 class LoginForm(Form):

@@ -2,7 +2,7 @@ import configparser
 import hashlib
 
 import mcrcon
-from flask import Flask, render_template, request, flash, redirect, url_for, session, render_template_string
+from flask import Flask, render_template, request, flash, redirect, url_for, session
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -10,12 +10,11 @@ from werkzeug.utils import secure_filename
 from forms import LoginForm, RecoveryForm, PasswordChangeForm, get_account_form, get_shop_form, \
     ServiceForm, ServiceFormBlocked, get_voucher_form, get_config_form, RegisterForm
 from heads import HeadManager
-from microsms.microsms import check_code
-from microsms.microsms_conf import configuration
+from microsms import check_code, configuration
 from sendmail import send_recovery_email
-from util import vig
-from util.randomstring import generate_random
-from util.util import authorized, get_epoch_time
+import vig
+from randomstring import generate_random
+from util import authorized, get_epoch_time
 
 # Create default configuration file
 config = configparser.ConfigParser()
@@ -76,10 +75,11 @@ app.config['RECAPTCHA_PRIVATE_KEY'] = recaptcha_private_key
 database = SQLAlchemy(app)
 
 # Create MCRcon instance and connect to minecraft server
-rcon = mcrcon.MCRcon(minecraft_rcon_host,
-                     minecraft_rcon_password,
-                     int(minecraft_rcon_port))
-rcon.connect()
+#rcon = mcrcon.MCRcon(minecraft_rcon_host,
+#                     minecraft_rcon_password,
+#                     int(minecraft_rcon_port))
+#rcon.connect()
+rcon = None
 
 # Create bCrypt instance
 bcrypt = Bcrypt(app)
@@ -566,9 +566,10 @@ def apply_rewards(username, rewards, name):
     heads.container.append(username)
     heads.services[username] = name
     flash('Success! Your rewards were transfered to ' + username, 'success')
-    split = rewards.split(';')
-    for command in split:
-        rcon.command(command.replace('{PLAYER}', username))
+    if rcon is not None:
+        split = rewards.split(';')
+        for command in split:
+            rcon.command(command.replace('{PLAYER}', username))
 
 
 @app.context_processor
