@@ -55,7 +55,7 @@ and I would really like to finish it. Then, I will probably
 return to writing OpenSectors2. :)
 
 ### Demo
-Demo is available here: `demo coming soon`
+Demo is available here: http://demo.socketbyte.pl
 
 ### License
 Project is licensed under MIT License.
