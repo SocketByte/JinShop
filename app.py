@@ -1,7 +1,7 @@
 import configparser
 import hashlib
 
-import mcrcon
+from mcrcon import MCRcon
 from flask import Flask, render_template, request, flash, redirect, url_for, session
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
@@ -74,12 +74,9 @@ app.config['RECAPTCHA_PRIVATE_KEY'] = recaptcha_private_key
 # Connect to the database and create tables
 database = SQLAlchemy(app)
 
-# Create MCRcon instance and connect to minecraft server
-#rcon = mcrcon.MCRcon(minecraft_rcon_host,
-#                     minecraft_rcon_password,
-#                     int(minecraft_rcon_port))
-#rcon.connect()
-rcon = None
+# RCON
+rcon = MCRcon()
+rcon.connect(minecraft_rcon_host, minecraft_rcon_port, minecraft_rcon_password)
 
 # Create bCrypt instance
 bcrypt = Bcrypt(app)
