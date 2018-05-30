@@ -13,7 +13,6 @@ def encode(clear, key=__secret_key):
 
 
 def decode(enc, key=__secret_key):
-    key = __secret_key
     dec = []
     enc = base64.urlsafe_b64decode(enc).decode('utf-8')
     for i in range(len(enc)):

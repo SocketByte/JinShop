@@ -13,8 +13,7 @@ from heads import HeadManager
 from microsms import check_code, configuration
 from sendmail import send_recovery_email
 import vig
-from randomstring import generate_random
-from util import authorized, get_epoch_time
+from utils import authorized, get_epoch_time, generate_random
 
 # Create default configuration file
 config = configparser.ConfigParser()
