@@ -296,6 +296,7 @@ def panel_account():
 
 
 @app.route('/panel/services', methods=['GET', 'POST'])
+@authorized
 def panel_services():
     return render_template('views/panel.html', tab='services', admins=admins, services=ShopData.query.all())
 
@@ -336,6 +337,7 @@ def panel_services_add():
 
 
 @app.route('/panel/services/delete/<id>', methods=['GET', 'POST'])
+@authorized
 def panel_services_delete(id):
     service = ShopData.query.filter_by(id=id).first()
     database.session.delete(service)
@@ -345,6 +347,7 @@ def panel_services_delete(id):
 
 
 @app.route('/panel/services/modify/<service_id>', methods=['GET', 'POST'])
+@authorized
 def panel_services_modify(service_id):
     service = ShopData.query.filter_by(id=service_id).first()
     form = ServiceFormBlocked()
@@ -389,6 +392,7 @@ def panel_services_modify(service_id):
 
 
 @app.route('/panel/vouchers', methods=['GET', 'POST'])
+@authorized
 def panel_vouchers():
     form = get_voucher_form(request.form, ShopData.query.all())
 
@@ -419,6 +423,7 @@ def panel_vouchers():
 
 
 @app.route('/panel/config', methods=['GET', 'POST'])
+@authorized
 def panel_configuration():
     form = get_config_form(request.form, config)
 
