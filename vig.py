@@ -1,6 +1,6 @@
 import base64
 
-__secret_key = 'ivMxTtmIEiEL2cZG60wKIxwO742bc9bs'
+__secret_key = ''
 
 
 def encode(clear, key=__secret_key):
